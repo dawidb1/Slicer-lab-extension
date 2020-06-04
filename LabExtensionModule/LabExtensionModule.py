@@ -18,7 +18,7 @@ class LabExtensionModule(ScriptedLoadableModule):
     self.parent.title = "LabExtensionModule" # TODO make this more human readable by adding spaces
     self.parent.categories = ["Examples"]
     self.parent.dependencies = []
-    self.parent.contributors = ["John Doe (AnyWare Corp.)"] # replace with "Firstname Lastname (Organization)"
+    self.parent.contributors = ["Dawid Baranski (POLSL)"] # replace with "Firstname Lastname (Organization)"
     self.parent.helpText = """
 This is an example of scripted loadable module bundled in an extension.
 It performs a simple thresholding on the input volume and optionally captures a screenshot.
@@ -50,8 +50,47 @@ class LabExtensionModuleWidget(ScriptedLoadableModuleWidget):
     parametersCollapsibleButton.text = "Parameters"
     self.layout.addWidget(parametersCollapsibleButton)
 
+    myParametersCollapsibleButton = ctk.ctkCollapsibleButton()
+    myParametersCollapsibleButton.text = "MyParameters"
+    self.layout.addWidget(myParametersCollapsibleButton)
+
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
+    myParametersFormLayout = qt.QFormLayout(myParametersCollapsibleButton)
+
+    #
+    # my volume selector
+    #
+    self.myVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.myVolumeSelector.nodeTypes = ["vtkMRMLModelNode"]
+    self.myVolumeSelector.selectNodeUponCreation = True
+    self.myVolumeSelector.addEnabled = False
+    self.myVolumeSelector.removeEnabled = False
+    self.myVolumeSelector.noneEnabled = False
+    self.myVolumeSelector.showHidden = False
+    self.myVolumeSelector.showChildNodeTypes = False
+    self.myVolumeSelector.setMRMLScene( slicer.mrmlScene )
+    self.myVolumeSelector.setToolTip( "Pick the volume to the my algorithm." )
+    myParametersFormLayout.addRow("Input Volume: ", self.myVolumeSelector)
+
+    #
+    # my threshold value
+    #
+    self.myImageThresholdSliderWidget = ctk.ctkSliderWidget()
+    self.myImageThresholdSliderWidget.singleStep = 1
+    self.myImageThresholdSliderWidget.minimum = 0
+    self.myImageThresholdSliderWidget.maximum = 100
+    self.myImageThresholdSliderWidget.value = 50
+    self.myImageThresholdSliderWidget.setToolTip("Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.")
+    myParametersFormLayout.addRow("My image threshold", self.myImageThresholdSliderWidget)
+
+    #
+    # My Apply Button
+    #
+    self.myApplyButton = qt.QPushButton("My Apply")
+    self.myApplyButton.toolTip = "Run the algorithm."
+    self.myApplyButton.enabled = False
+    myParametersFormLayout.addRow(self.myApplyButton)
 
     #
     # input volume selector
@@ -82,6 +121,7 @@ class LabExtensionModuleWidget(ScriptedLoadableModuleWidget):
     self.outputSelector.setMRMLScene( slicer.mrmlScene )
     self.outputSelector.setToolTip( "Pick the output to the algorithm." )
     parametersFormLayout.addRow("Output Volume: ", self.outputSelector)
+
 
     #
     # threshold value
