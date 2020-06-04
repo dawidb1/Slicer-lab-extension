@@ -61,17 +61,17 @@ class LabExtensionModuleWidget(ScriptedLoadableModuleWidget):
     #
     # my volume selector
     #
-    self.myVolumeSelector = slicer.qMRMLNodeComboBox()
-    self.myVolumeSelector.nodeTypes = ["vtkMRMLModelNode"]
-    self.myVolumeSelector.selectNodeUponCreation = True
-    self.myVolumeSelector.addEnabled = False
-    self.myVolumeSelector.removeEnabled = False
-    self.myVolumeSelector.noneEnabled = False
-    self.myVolumeSelector.showHidden = False
-    self.myVolumeSelector.showChildNodeTypes = False
-    self.myVolumeSelector.setMRMLScene( slicer.mrmlScene )
-    self.myVolumeSelector.setToolTip( "Pick the volume to the my algorithm." )
-    myParametersFormLayout.addRow("Input Volume: ", self.myVolumeSelector)
+    self.myModelSelector = slicer.qMRMLNodeComboBox()
+    self.myModelSelector.nodeTypes = ["vtkMRMLModelNode"]
+    self.myModelSelector.selectNodeUponCreation = True
+    self.myModelSelector.addEnabled = False
+    self.myModelSelector.removeEnabled = False
+    self.myModelSelector.noneEnabled = False
+    self.myModelSelector.showHidden = False
+    self.myModelSelector.showChildNodeTypes = False
+    self.myModelSelector.setMRMLScene( slicer.mrmlScene )
+    self.myModelSelector.setToolTip( "Pick the volume to the my algorithm." )
+    myParametersFormLayout.addRow("Input Volume: ", self.myModelSelector)
 
     #
     # my threshold value
@@ -88,9 +88,14 @@ class LabExtensionModuleWidget(ScriptedLoadableModuleWidget):
     # My Apply Button
     #
     self.myApplyButton = qt.QPushButton("My Apply")
-    self.myApplyButton.toolTip = "Run the algorithm."
+    self.myApplyButton.toolTip = "Hide/enable model."
     self.myApplyButton.enabled = False
     myParametersFormLayout.addRow(self.myApplyButton)
+
+    # my connections
+    self.myApplyButton.connect('clicked(bool)', self.onMyApplyButton)
+    self.myModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onMyModelSelect)
+    self.myImageThresholdSliderWidget.connect("valueChanged(double)", self.onMyOpacityChange)
 
     #
     # input volume selector
@@ -160,9 +165,23 @@ class LabExtensionModuleWidget(ScriptedLoadableModuleWidget):
 
     # Refresh Apply button state
     self.onSelect()
+    self.onMyModelSelect()
 
   def cleanup(self):
     pass
+
+  def onMyOpacityChange(self):
+    myLogic = LabExtensionModuleLogic()
+    opacity = self.myImageThresholdSliderWidget.value / 100
+    myLogic.myChangeModelOpacity(self.myModelSelector.currentNode(), opacity)
+
+  def onMyModelSelect(self):
+    self.myApplyButton.enabled = self.myModelSelector.currentNode()
+
+  def onMyApplyButton(self):
+    myLogic = LabExtensionModuleLogic()
+    enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
+    myLogic.myChangeModelVisibility(self.myModelSelector.currentNode(), enableScreenshotsFlag)
 
   def onSelect(self):
     self.applyButton.enabled = self.inputSelector.currentNode() and self.outputSelector.currentNode()
@@ -212,6 +231,30 @@ class LabExtensionModuleLogic(ScriptedLoadableModuleLogic):
     if inputVolumeNode.GetID()==outputVolumeNode.GetID():
       logging.debug('isValidInputOutputData failed: input and output volume is the same. Create a new volume for output to avoid this error.')
       return False
+    return True
+
+  def myChangeModelVisibility(self, inputModel, enableScreenshots=0):
+
+    logging.info('Changing model visibility')
+
+    model_display_node = inputModel.GetDisplayNode()
+    model_display_node.SetVisibility( not model_display_node.GetVisibility() )
+
+    # Capture screenshot
+    if enableScreenshots:
+      self.takeScreenshot('LabExtensionModuleTest-Start','MyScreenshot',-1)
+
+    logging.info('Processing completed')
+
+    return True
+
+  def myChangeModelOpacity(self, inputModel, opacity):
+
+    logging.info('Changing model opacity')
+
+    model_display_node = inputModel.GetDisplayNode()
+    model_display_node.SetOpacity(opacity)
+
     return True
 
   def run(self, inputVolume, outputVolume, imageThreshold, enableScreenshots=0):
